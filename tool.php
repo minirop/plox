@@ -1,4 +1,6 @@
 <?php
+#generates the AST/visitor classes from the definition
+
 $file = fopen('ast.php', 'w');
 
 fprintf($file, "<?php\nrequire_once('token.php');\n\n");
