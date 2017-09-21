@@ -73,7 +73,7 @@ class Scanner
 			case '>': $this->addToken($this->match('=') ? TOK_GREATER_EQUAL : TOK_GREATER); break;
 
 			case '/':
-				if (match('/'))
+				if ($this->match('/'))
 				{
 					// A comment goes until the end of the line.
 					while ($this->peek() != '\n' && !$this->isAtEnd()) $this->advance();
@@ -120,6 +120,7 @@ class Scanner
 
 	private function addToken($type, $literal = null)
 	{
+		if ($literal == null) $literal = (string)$type;
 		$this->tokens[] = new Token($type, $literal, $this->line);
 	}
 
