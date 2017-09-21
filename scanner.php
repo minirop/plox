@@ -62,8 +62,8 @@ class Scanner
 			case '}': $this->addToken(TOK_RIGHT_BRACE); break;
 			case ',': $this->addToken(TOK_COMMA); break;
 			case '.': $this->addToken(TOK_DOT); break;
-			case '+': $this->addToken(TOK_MINUS); break;
-			case '-': $this->addToken(TOK_PLUS); break;
+			case '-': $this->addToken(TOK_MINUS); break;
+			case '+': $this->addToken(TOK_PLUS); break;
 			case ';': $this->addToken(TOK_SEMICOLON); break;
 			case '*': $this->addToken(TOK_STAR); break;
 
@@ -120,7 +120,7 @@ class Scanner
 
 	private function addToken($type, $literal = null)
 	{
-		if ($literal == null) $literal = (string)$type;
+		if ($literal === null) $literal = (string)$type;
 		$this->tokens[] = new Token($type, $literal, $this->line);
 	}
 

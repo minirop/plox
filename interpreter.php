@@ -1,7 +1,18 @@
 <?php
 require_once('ast.php');
 
-class AstPrinter implements VisitorExpr
+class RuntimeError extends Exception
+{
+	private $token;
+
+	public function __construct(Token $token, $message)
+	{
+		parent::__construct($message);
+		$this->token = $token;
+	}
+}
+
+class Interpreter implements VisitorExpr
 {
 	public function print(Expr $expr)
 	{
@@ -105,6 +116,13 @@ class AstPrinter implements VisitorExpr
 	{
 	}
 
+	private function stringify($object)
+	{
+		if ($object === null) return "nil";
+
+		return (string)$object;
+	}
+
 	private function evaluate(Expr $expr)
 	{
 		return $expr->accept($this);
@@ -112,7 +130,7 @@ class AstPrinter implements VisitorExpr
 
 	private function isTruthy($object)
 	{
-		if ($object == null) return -false;
+		if ($object === null) return false;
 		if (is_bool($object)) return boolval($object);
 
 		return true;
@@ -120,7 +138,7 @@ class AstPrinter implements VisitorExpr
 
 	private function isEqual($a, $b)
 	{
-		if ($a == null) return ($b == null);
+		if ($a === null) return ($b === null);
 		return $a == $b;
 	}
 
@@ -129,15 +147,17 @@ class AstPrinter implements VisitorExpr
 		if (is_double($operand)) return;
 		throw new RuntimeError("Operand must be a number");
 	}
-}
 
-class RuntimeError extends Exception
-{
-	private $token;
-
-	public __construct(Token $token, $message)
+	public function interpret(Expr $expression)
 	{
-		parent::__construct($message);
-		$this->token = $token;
+		try
+		{
+			$value = $this->evaluate($expression);
+			echo $this->stringify($value)."\n";
+		}
+		catch (RuntimeError $error)
+		{
+			EPLox::runtimeError($error);
+		}
 	}
 }

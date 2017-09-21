@@ -1,7 +1,7 @@
 <?php
 require_once('scanner.php');
 require_once('parser.php');
-require_once('ast-printer.php');
+require_once('interpreter.php');
 
 if ($argc > 2)
 {
@@ -42,11 +42,5 @@ function run($source)
 
 	if (EPlox::$hadError) return;
 
-	/*
-	foreach ($tokens as $token)
-	{
-		print ($token."\n");
-	}
-	*/
-	echo (new AstPrinter())->print($expression)."\n";
+	(new Interpreter())->interpret($expression);
 }
