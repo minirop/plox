@@ -85,12 +85,12 @@ class Scanner
 				break;
 
 			case ' ':
-			case '\r':
-			case '\t':
+			case "\r":
+			case "\t":
 				// Ignore whitespace.
 				break;
 
-			case '\n':
+			case "\n":
 				$this->line++;
 				break;
 

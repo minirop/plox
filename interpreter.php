@@ -1,5 +1,6 @@
 <?php
 require_once('ast.php');
+require_once('environment.php');
 
 class RuntimeError extends Exception
 {
@@ -12,17 +13,44 @@ class RuntimeError extends Exception
 	}
 }
 
-class Interpreter implements VisitorExpr
+class Interpreter implements VisitorExpr, VisitorStmt
 {
+	private $environment;
+
+	public function __construct()
+	{
+		$this->environment = new Environment();
+	}
+
+	public function interpret(Array $statements)
+	{
+		try
+		{
+			foreach ($statements as $statement)
+			{
+				$this->execute($statement);
+			}
+		}
+		catch (RuntimeError $error)
+		{
+			EPLox::runtimeError($error);
+		}
+	}
+
 	public function print(Expr $expr)
 	{
+		echo "lol\n";
 	}
 
-	public function visitAssignExpr(Assign $expr)
+	public function visitAssignExpr(AssignExpr $expr)
 	{
+		$value = $this->evaluate($expr->value);
+		$this->environment->assign($expr->name, $value);
+
+		return $value;
 	}
 
-	public function visitBinaryExpr(Binary $expr)
+	public function visitBinaryExpr(BinaryExpr $expr)
 	{
 		$left = $this->evaluate($expr->left);
 		$right = $this->evaluate($expr->right);
@@ -48,56 +76,68 @@ class Interpreter implements VisitorExpr
 			case TOK_STAR:
 				return doubleval($left) * doubleval($right);
 
-			case GREATER:
+			case TOK_GREATER:
 				return (double)$left > (double)$right;
-			case GREATER_EQUAL:
+			case TOK_GREATER_EQUAL:
 				return (double)$left >= (double)$right;
-			case LESS:
+			case TOK_LESS:
 				return (double)$left < (double)$right;
-			case LESS_EQUAL:
+			case TOK_LESS_EQUAL:
 				return (double)$left <= (double)$right;
-			case BANG_EQUAL: return !$this->isEqual($left, $right);
-			case EQUAL_EQUAL: return $this->isEqual($left, $right);
+			case TOK_BANG_EQUAL: return !$this->isEqual($left, $right);
+			case TOK_EQUAL_EQUAL: return $this->isEqual($left, $right);
 		}
 
 		return null;
 	}
 
-	public function visitCallExpr(Call $expr)
+	public function visitCallExpr(CallExpr $expr)
 	{
 	}
 	
-	public function visitGetExpr(Get $expr)
+	public function visitGetExpr(GetExpr $expr)
 	{
 	}
 	
-	public function visitGroupingExpr(Grouping $expr)
+	public function visitGroupingExpr(GroupingExpr $expr)
 	{
 		return $this->evaluate($expr->expression);
 	}
 	
-	public function visitLiteralExpr(Literal $expr)
+	public function visitLiteralExpr(LiteralExpr $expr)
 	{
 		return $expr->value;
 	}
 	
-	public function visitLogicalExpr(Logical $expr)
+	public function visitLogicalExpr(LogicalExpr $expr)
+	{
+		$left = $this->evaluate($expr->left);
+
+		if ($expr->operator->type == TOK_OR)
+		{
+			if ($this->isTruthy($left)) return $left;
+		}
+		else
+		{
+			if (!$this->isTruthy($left)) return $left;
+		}
+
+		return $this->evaluate($expr->right);
+	}
+	
+	public function visitSetExpr(SetExpr $expr)
 	{
 	}
 	
-	public function visitSetExpr(Set $expr)
+	public function visitSuperExpr(SuperExpr $expr)
 	{
 	}
 	
-	public function visitSuperExpr(Super $expr)
+	public function visitThisExpr(ThisExpr $expr)
 	{
 	}
 	
-	public function visitThisExpr(This $expr)
-	{
-	}
-	
-	public function visitUnaryExpr(Unary $expr)
+	public function visitUnaryExpr(UnaryExpr $expr)
 	{
 		$right = $this->evaluate($expr->right);
 
@@ -112,8 +152,56 @@ class Interpreter implements VisitorExpr
 		return null;
 	}
 	
-	public function visitVariableExpr(Variable $expr)
+	public function visitVariableExpr(VariableExpr $expr)
 	{
+		return $this->environment->get($expr->name);
+	}
+
+	public function visitBlockStmt(BlockStmt $stmt)
+	{
+		$this->executeBlock($stmt->statements, new Environment($this->environment));
+	}
+
+	public function visitExpressionStmt(ExpressionStmt $stmt)
+	{
+		$this->evaluate($stmt->expression);
+	}
+
+	public function visitIfStmt(IfStmt $stmt)
+	{
+		if ($this->isTruthy($this->evaluate($stmt->condition)))
+		{
+			$this->execute($stmt->thenBranch);
+		}
+		else if ($stmt->elseBranch !== null)
+		{
+			$this->execute($stmt->elseBranch);
+		}
+	}
+
+	public function visitPrintStmt(PrintStmt $stmt)
+	{
+		$value = $this->evaluate($stmt->expression);
+		print($this->stringify($value)."\n");
+	}
+
+	public function visitVarStmt(VarStmt $stmt)
+	{
+		$value = null;
+		if ($stmt->initializer !== null)
+		{
+			$value = $this->evaluate($stmt->initializer);
+		}
+
+		$this->environment->define($stmt->name->literal, $value);
+	}
+
+	public function visitWhileStmt(WhileStmt $stmt)
+	{
+		while ($this->isTruthy($this->evaluate($stmt->condition)))
+		{
+			$this->execute($stmt->body);
+		}
 	}
 
 	private function stringify($object)
@@ -148,16 +236,26 @@ class Interpreter implements VisitorExpr
 		throw new RuntimeError("Operand must be a number");
 	}
 
-	public function interpret(Expr $expression)
+	private function execute(Stmt $stmt)
 	{
+		$stmt->accept($this);
+	}
+
+	private function executeBlock(Array $statements, Environment $environment)
+	{
+		$previous = $this->environment;
 		try
 		{
-			$value = $this->evaluate($expression);
-			echo $this->stringify($value)."\n";
+			$this->environment = $environment;
+
+			foreach ($statements as $statement)
+			{
+				$this->execute($statement);
+			}
 		}
-		catch (RuntimeError $error)
+		finally
 		{
-			EPLox::runtimeError($error);
+			$this->environment = $previous;
 		}
 	}
 }

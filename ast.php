@@ -8,21 +8,21 @@ abstract class Expr
 
 interface VisitorExpr
 {
-	public function visitAssignExpr(Assign $expr);
-	public function visitBinaryExpr(Binary $expr);
-	public function visitCallExpr(Call $expr);
-	public function visitGetExpr(Get $expr);
-	public function visitGroupingExpr(Grouping $expr);
-	public function visitLiteralExpr(Literal $expr);
-	public function visitLogicalExpr(Logical $expr);
-	public function visitSetExpr(Set $expr);
-	public function visitSuperExpr(Super $expr);
-	public function visitThisExpr(This $expr);
-	public function visitUnaryExpr(Unary $expr);
-	public function visitVariableExpr(Variable $expr);
+	public function visitAssignExpr(AssignExpr $expr);
+	public function visitBinaryExpr(BinaryExpr $expr);
+	public function visitCallExpr(CallExpr $expr);
+	public function visitGetExpr(GetExpr $expr);
+	public function visitGroupingExpr(GroupingExpr $expr);
+	public function visitLiteralExpr(LiteralExpr $expr);
+	public function visitLogicalExpr(LogicalExpr $expr);
+	public function visitSetExpr(SetExpr $expr);
+	public function visitSuperExpr(SuperExpr $expr);
+	public function visitThisExpr(ThisExpr $expr);
+	public function visitUnaryExpr(UnaryExpr $expr);
+	public function visitVariableExpr(VariableExpr $expr);
 }
 
-class Assign extends Expr
+class AssignExpr extends Expr
 {
 	public function __construct(Token $name, Expr $value)
 	{
@@ -39,7 +39,7 @@ class Assign extends Expr
 	public $value;
 }
 
-class Binary extends Expr
+class BinaryExpr extends Expr
 {
 	public function __construct(Expr $left, Token $operator, Expr $right)
 	{
@@ -58,7 +58,7 @@ class Binary extends Expr
 	public $right;
 }
 
-class Call extends Expr
+class CallExpr extends Expr
 {
 	public function __construct(Expr $callee, Token $paren, array $arguments)
 	{
@@ -77,7 +77,7 @@ class Call extends Expr
 	public $arguments;
 }
 
-class Get extends Expr
+class GetExpr extends Expr
 {
 	public function __construct(Expr $object, Token $name)
 	{
@@ -94,7 +94,7 @@ class Get extends Expr
 	public $name;
 }
 
-class Grouping extends Expr
+class GroupingExpr extends Expr
 {
 	public function __construct(Expr $expression)
 	{
@@ -109,7 +109,7 @@ class Grouping extends Expr
 	public $expression;
 }
 
-class Literal extends Expr
+class LiteralExpr extends Expr
 {
 	public function __construct($value)
 	{
@@ -124,7 +124,7 @@ class Literal extends Expr
 	public $value;
 }
 
-class Logical extends Expr
+class LogicalExpr extends Expr
 {
 	public function __construct(Expr $left, Token $operator, Expr $right)
 	{
@@ -143,7 +143,7 @@ class Logical extends Expr
 	public $right;
 }
 
-class Set extends Expr
+class SetExpr extends Expr
 {
 	public function __construct(Expr $object, Token $name, Expr $value)
 	{
@@ -162,7 +162,7 @@ class Set extends Expr
 	public $value;
 }
 
-class Super extends Expr
+class SuperExpr extends Expr
 {
 	public function __construct(Token $keyword, Token $method)
 	{
@@ -179,7 +179,7 @@ class Super extends Expr
 	public $method;
 }
 
-class This extends Expr
+class ThisExpr extends Expr
 {
 	public function __construct(Token $keyword)
 	{
@@ -194,7 +194,7 @@ class This extends Expr
 	public $keyword;
 }
 
-class Unary extends Expr
+class UnaryExpr extends Expr
 {
 	public function __construct(Token $operator, Expr $right)
 	{
@@ -211,7 +211,7 @@ class Unary extends Expr
 	public $right;
 }
 
-class Variable extends Expr
+class VariableExpr extends Expr
 {
 	public function __construct(Token $name)
 	{
@@ -224,5 +224,118 @@ class Variable extends Expr
 	}
 
 	public $name;
+}
+
+abstract class Stmt
+{
+	abstract public function accept($visitor);
+}
+
+interface VisitorStmt
+{
+	public function visitBlockStmt(BlockStmt $stmt);
+	public function visitExpressionStmt(ExpressionStmt $stmt);
+	public function visitIfStmt(IfStmt $stmt);
+	public function visitPrintStmt(PrintStmt $stmt);
+	public function visitVarStmt(VarStmt $stmt);
+	public function visitWhileStmt(WhileStmt $stmt);
+}
+
+class BlockStmt extends Stmt
+{
+	public function __construct(Array $statements)
+	{
+		$this->statements = $statements;
+	}
+
+	public function accept($visitor)
+	{
+		return $visitor->visitBlockStmt($this);
+	}
+
+	public $statements;
+}
+
+class ExpressionStmt extends Stmt
+{
+	public function __construct(Expr $expression)
+	{
+		$this->expression = $expression;
+	}
+
+	public function accept($visitor)
+	{
+		return $visitor->visitExpressionStmt($this);
+	}
+
+	public $expression;
+}
+
+class IfStmt extends Stmt
+{
+	public function __construct(Expr $condition, Stmt $thenBranch, Stmt $elseBranch)
+	{
+		$this->condition = $condition;
+		$this->thenBranch = $thenBranch;
+		$this->elseBranch = $elseBranch;
+	}
+
+	public function accept($visitor)
+	{
+		return $visitor->visitIfStmt($this);
+	}
+
+	public $condition;
+	public $thenBranch;
+	public $elseBranch;
+}
+
+class PrintStmt extends Stmt
+{
+	public function __construct(Expr $expression)
+	{
+		$this->expression = $expression;
+	}
+
+	public function accept($visitor)
+	{
+		return $visitor->visitPrintStmt($this);
+	}
+
+	public $expression;
+}
+
+class VarStmt extends Stmt
+{
+	public function __construct(Token $name, Expr $initializer)
+	{
+		$this->name = $name;
+		$this->initializer = $initializer;
+	}
+
+	public function accept($visitor)
+	{
+		return $visitor->visitVarStmt($this);
+	}
+
+	public $name;
+	public $initializer;
+}
+
+class WhileStmt extends Stmt
+{
+	public function __construct(Expr $condition, Stmt $body)
+	{
+		$this->condition = $condition;
+		$this->body = $body;
+	}
+
+	public function accept($visitor)
+	{
+		return $visitor->visitWhileStmt($this);
+	}
+
+	public $condition;
+	public $body;
 }
 

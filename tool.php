@@ -20,6 +20,15 @@ defineAst($file, 'Expr', [
 	"Variable : Token name"
 ]);
 
+defineAst($file, 'Stmt', [
+	"Block      : Array statements",
+	"Expression : Expr expression",
+	"If         : Expr condition, Stmt thenBranch, Stmt elseBranch",
+	"Print      : Expr expression",
+	"Var        : Token name, Expr initializer",
+	"While      : Expr condition, Stmt body"
+]);
+
 fclose($file);
 
 function defineVisitor($file, $baseName, $types)
@@ -31,7 +40,7 @@ function defineVisitor($file, $baseName, $types)
 		$f = explode(':', $value);
 		$className = trim($f[0]);
 
-		fprintf($file, "\tpublic function visit%s%s(%s \$%s);\n", $className, $baseName, $className, strtolower($baseName));
+		fprintf($file, "\tpublic function visit%s%s(%s%s \$%s);\n", $className, $baseName, $className, $baseName, strtolower($baseName));
 	}
 	
 	fprintf($file, "}\n\n");
@@ -57,6 +66,7 @@ function defineAst($file, $baseName, $types)
 
 function defineType($file, $baseName, $className, $fieldList)
 {
+	$className .= $baseName;
 	fprintf($file, "class %s extends %s\n{\n", $className, $baseName);
 	fprintf($file, "\tpublic function __construct(%s)\n\t{\n", add_dollar_signs($fieldList));
 	$fields = explode(',', $fieldList);
@@ -77,7 +87,7 @@ function defineType($file, $baseName, $className, $fieldList)
 	}
 	fprintf($file, "\t}\n\n");
 	fprintf($file, "\tpublic function accept(\$visitor)\n\t{\n");
-	fprintf($file, "\t\treturn \$visitor->visit%s%s(\$this);\n", $className, $baseName);
+	fprintf($file, "\t\treturn \$visitor->visit%s(\$this);\n", $className);
 	fprintf($file, "\t}\n\n");
 	fprintf($file, $fieldsAsMembers);
 	fprintf($file, "}\n\n");

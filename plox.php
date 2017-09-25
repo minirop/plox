@@ -38,9 +38,9 @@ function run($source)
 	$tokens = $scanner->scanTokens();
 
 	$parser = new Parser($tokens);
-	$expression = $parser->parse();
+	$statements = $parser->parse();
 
 	if (EPlox::$hadError) return;
 
-	(new Interpreter())->interpret($expression);
+	(new Interpreter())->interpret($statements);
 }

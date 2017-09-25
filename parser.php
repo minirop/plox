@@ -13,21 +13,218 @@ class Parser
 		$this->tokens = $tokens;
 	}
 
-	function parse()
+	public function parse()
 	{
-		try
+		$statements = [];
+		while (!$this->isAtEnd())
 		{
-			return $this->expression();
+			$statements[] = $this->declaration();
 		}
-		catch (ParseError $err)
+
+		return $statements;
+	}
+
+	private function declaration()
+	{
+		try {
+			if ($this->match(TOK_VAR)) return $this->varDeclaration();
+			return $this->statement();
+		}
+		catch (ParseError $error)
 		{
+			$this->synchronize();
 			return null;
 		}
 	}
 
+	private function varDeclaration()
+	{
+		$name = $this->consume(TOK_IDENTIFIER, "Expect variable name.");
+
+		$initializer = null;
+		if ($this->match(TOK_EQUAL))
+		{
+			$initializer = $this->expression();
+		}
+
+		$this->consume(TOK_SEMICOLON, "Expect ';' after variable declaration.");
+		return new VarStmt($name, $initializer);
+	}
+
+	private function block()
+	{
+		$statements = [];
+
+		while (!$this->check(TOK_RIGHT_BRACE) && !$this->isAtEnd())
+		{
+			$statements[] = $this->declaration();
+		}
+
+		$this->consume(TOK_RIGHT_BRACE, "Expect '}' after block.");
+
+		return $statements;
+	}
+
+	private function statement()
+	{
+		if ($this->match(TOK_FOR)) return $this->forStatement();
+
+		if ($this->match(TOK_IF)) return $this->ifStatement();
+
+		if ($this->match(TOK_PRINT)) return $this->printStatement();
+
+		if ($this->match(TOK_WHILE)) return $this->whileStatement();
+
+		if ($this->match(TOK_LEFT_BRACE)) return new BlockStmt($this->block());
+
+		return $this->expressionStatement();
+	}
+
+	private function whileStatement()
+	{
+		$this->consume(TOK_LEFT_PAREN, "Expect '(' after 'while'.");
+		$condition = $this->expression();
+		$this->consume(TOK_RIGHT_PAREN, "Expect ')' after condition.");
+		$body = $this->statement();
+
+		return new WhileStmt($condition, $body);
+	}
+
+	private function forStatement()
+	{
+		$this->consume(TOK_LEFT_PAREN, "Expect '(' after 'for'.");
+
+		if ($this->match(TOK_SEMICOLON))
+		{
+			$initializer = null;
+		}
+		else if ($this->match(TOK_VAR))
+		{
+			$initializer = $this->varDeclaration();
+		}
+		else
+		{
+			$initializer = $this->expressionStatement();
+		}
+
+		$condition = null;
+		if (!$this->check(TOK_SEMICOLON))
+		{
+			$condition = $this->expression();
+		}
+		$this->consume(TOK_SEMICOLON, "Expect ';' after loop condition.");
+
+		$increment = null;
+		if (!$this->check(TOK_RIGHT_PAREN))
+		{
+			$increment = $this->expression();
+		}
+		$this->consume(TOK_RIGHT_PAREN, "Expect ')' after for clauses.");
+
+		$body = $this->statement();
+
+		if ($increment !== null)
+		{
+			$body = new BlockStmt([
+				$body,
+				new ExpressionStmt($increment)
+			]);
+		}
+
+		if ($condition === null) $condition = new LiteralExpr(true);
+		$body = new WhileStmt($condition, $body);
+
+		if ($initializer !== null)
+		{
+			$body = new BlockStmt([
+				$initializer,
+				$body
+			]);
+		}
+
+		return $body;
+	}
+
+	private function expressionStatement()
+	{
+		$expr = $this->expression();
+		$this->consume(TOK_SEMICOLON, "Expect ';' after expression.");
+		return new ExpressionStmt($expr);
+	}
+
+	private function printStatement()
+	{
+		$value = $this->expression();
+		$this->consume(TOK_SEMICOLON, "Expect ';' after value.");
+		return new PrintStmt($value);
+	}
+
+	private function ifStatement()
+	{
+		$this->consume(TOK_LEFT_PAREN, "Expect '(' after 'if'.");
+		$condition = $this->expression();
+		$this->consume(TOK_RIGHT_PAREN, "Expect ')' after if condition."); 
+
+		$thenBranch = $this->statement();
+		$elseBranch = null;
+		if ($this->match(TOK_ELSE))
+		{
+			$elseBranch = $this->statement();
+		}
+
+		return new IfStmt($condition, $thenBranch, $elseBranch);
+	}
+
 	private function expression()
 	{
-		return $this->equality();
+		return $this->assignment();
+	}
+
+	private function assignment()
+	{
+		$expr = $this->or();
+
+		if ($this->match(TOK_EQUAL))
+		{
+			$equals = $this->previous();
+			$value = $this->assignment();
+
+			if ($expr instanceof VariableExpr)
+			{
+				$name = $expr->name;
+				return new AssignExpr($name, $value);
+			}
+		}
+
+		return $expr;
+	}
+
+	private function or()
+	{
+		$expr = $this->and();
+
+		while ($this->match(TOK_OR))
+		{
+			$operator = $this->previous();
+			$right = $this->and();
+			$expr = new LogicalExpr($expr, $operator, $right);
+		}
+		
+		return $expr;
+	}
+
+	private function and()
+	{
+		$expr = $this->equality();
+
+		while ($this->match(TOK_AND))
+		{
+			$operator = $this->previous();
+			$right = $this->equality();
+			$expr = new LogicalExpr($expr, $operator, $right);
+		}
+
+		return $expr;
 	}
 
 	private function equality()
@@ -38,7 +235,7 @@ class Parser
 		{
 			$operator = $this->previous();
 			$right = $this->comparison();
-			$expr = new Binary($expr, $operator, $right);
+			$expr = new BinaryExpr($expr, $operator, $right);
 		}
 
 		return $expr;
@@ -52,7 +249,7 @@ class Parser
 		{
 			$operator = $this->previous();
 			$right = $this->addition();
-			$expr = new Binary($expr, $operator, $right);
+			$expr = new BinaryExpr($expr, $operator, $right);
 		}
 
 		return $expr;
@@ -66,7 +263,7 @@ class Parser
 		{
 			$operator = $this->previous();
 			$right = $this->multiplication();
-			$expr = new Binary($expr, $operator, $right);
+			$expr = new BinaryExpr($expr, $operator, $right);
 		}
 
 		return $expr;
@@ -80,7 +277,7 @@ class Parser
 		{
 			$operator = $this->previous();
 			$right = $this->unary();
-			$expr = new Binary($expr, $operator, $right);
+			$expr = new BinaryExpr($expr, $operator, $right);
 		}
 
 		return $expr;
@@ -92,7 +289,7 @@ class Parser
 		{
 			$operator = $this->previous();
 			$right = $this->unary();
-			return new Unary($operator, $right);
+			return new UnaryExpr($operator, $right);
 		}
 
 		return $this->primary();
@@ -100,20 +297,25 @@ class Parser
 
 	private function primary()
 	{
-		if ($this->match(TOK_FALSE)) return new Literal(false);
-		if ($this->match(TOK_TRUE)) return new Literal(true);
-		if ($this->match(TOK_NIL)) return new Literal(null);
+		if ($this->match(TOK_FALSE)) return new LiteralExpr(false);
+		if ($this->match(TOK_TRUE)) return new LiteralExpr(true);
+		if ($this->match(TOK_NIL)) return new LiteralExpr(null);
 
 		if ($this->match(TOK_NUMBER, TOK_STRING))
 		{
-			return new Literal($this->previous()->literal);
+			return new LiteralExpr($this->previous()->literal);
+		}
+
+		if ($this->match(TOK_IDENTIFIER))
+		{
+			return new VariableExpr($this->previous());
 		}
 
 		if ($this->match(TOK_LEFT_PAREN))
 		{
 			$expr = $this->expression();
 			$this->consume(TOK_RIGHT_PAREN, "Expect ')' after expression.");
-			return new Grouping($expr);
+			return new GroupingExpr($expr);
 		}
 
 		throw $this->error($this->peek(), "Expect expression.");
@@ -123,7 +325,7 @@ class Parser
 	{
 		if ($this->check($tokenType)) return $this->advance();
 
-		throw $this->error(peek(), $message);
+		throw $this->error($this->peek(), $message);
 		
 	}
 
@@ -200,5 +402,3 @@ class Parser
 		return new ParseError();
 	}
 }
-
-//class ParseError extends ErrorException {}
