@@ -1,7 +1,4 @@
 <?php
-require_once('ast.php');
-require_once('environment.php');
-
 class RuntimeError extends Exception
 {
 	private $token;
@@ -15,11 +12,15 @@ class RuntimeError extends Exception
 
 class Interpreter implements VisitorExpr, VisitorStmt
 {
+	public $globals;
 	private $environment;
 
 	public function __construct()
 	{
-		$this->environment = new Environment();
+		$this->globals = new Environment();
+		$this->environment = $this->globals;
+
+		$this->globals->define("clock", new \Std\Clock());
 	}
 
 	public function interpret(Array $statements)
@@ -93,6 +94,26 @@ class Interpreter implements VisitorExpr, VisitorStmt
 
 	public function visitCallExpr(CallExpr $expr)
 	{
+		$callee = $this->evaluate($expr->callee);
+
+		$arguments = [];
+		foreach ($expr->arguments as $argument)
+		{
+			$arguments[] = $this->evaluate($argument);
+		}
+
+		if (!($callee instanceof LoxCallable))
+		{
+			throw new RuntimeError($expr->paren, "Can only call functions and classes.");
+		}
+
+		if (count($arguments) != $callee->arity())
+		{
+			throw new RuntimeError($expr->paren,
+				"Expected ".$callee->arity()." arguments but got ".count($arguments).".");
+		}
+
+		return $callee->call($this, $arguments);
 	}
 	
 	public function visitGetExpr(GetExpr $expr)
@@ -167,6 +188,12 @@ class Interpreter implements VisitorExpr, VisitorStmt
 		$this->evaluate($stmt->expression);
 	}
 
+	public function visitFunctionStmt(FunctionStmt $stmt)
+	{
+		$function = new LoxFunction($stmt, $this->environment);
+		$this->environment->define($stmt->name->literal, $function);
+	}
+
 	public function visitIfStmt(IfStmt $stmt)
 	{
 		if ($this->isTruthy($this->evaluate($stmt->condition)))
@@ -183,6 +210,15 @@ class Interpreter implements VisitorExpr, VisitorStmt
 	{
 		$value = $this->evaluate($stmt->expression);
 		print($this->stringify($value)."\n");
+	}
+
+	public function visitReturnStmt(ReturnStmt $stmt)
+	{
+		$value = null;
+		if ($stmt->value !== null)
+			$value = $this->evaluate($stmt->value);
+
+		throw new ReturnException($value);
 	}
 
 	public function visitVarStmt(VarStmt $stmt)
@@ -241,7 +277,7 @@ class Interpreter implements VisitorExpr, VisitorStmt
 		$stmt->accept($this);
 	}
 
-	private function executeBlock(Array $statements, Environment $environment)
+	public function executeBlock(Array $statements, Environment $environment)
 	{
 		$previous = $this->environment;
 		try

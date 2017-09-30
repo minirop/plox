@@ -1,7 +1,5 @@
 <?php
-require_once('token.php');
-require_once('ast.php');
-require_once('eplox.php');
+define('FUNC_MAX_ARGS', 8);
 
 class Parser
 {
@@ -27,6 +25,7 @@ class Parser
 	private function declaration()
 	{
 		try {
+			if ($this->match(TOK_FUN)) return $this->method("function");
 			if ($this->match(TOK_VAR)) return $this->varDeclaration();
 			return $this->statement();
 		}
@@ -35,6 +34,30 @@ class Parser
 			$this->synchronize();
 			return null;
 		}
+	}
+
+	private function method($kind) {
+		$name = $this->consume(TOK_IDENTIFIER, "Expect ".$kind." name.");
+
+		$this->consume(TOK_LEFT_PAREN, "Expect '(' after ".$kind." name.");
+		$parameters = [];
+		if (!$this->check(TOK_RIGHT_PAREN))
+		{
+			do
+			{
+				if (count($parameters) >= FUNC_MAX_ARGS)
+				{
+					$this->error($this->peek(), "Cannot have more than 8 arguments.");
+				}
+
+				$parameters[] = $this->consume(TOK_IDENTIFIER, "Expect parameter name.");
+			} while ($this->match(TOK_COMMA));
+		}
+		$this->consume(TOK_RIGHT_PAREN, "Expect ')' after parameters.");
+
+		$this->consume(TOK_LEFT_BRACE, "Expect '{' before ".$kind." body.");
+		$body = $this->block();
+		return new FunctionStmt($name, $parameters, $body);
 	}
 
 	private function varDeclaration()
@@ -73,11 +96,26 @@ class Parser
 
 		if ($this->match(TOK_PRINT)) return $this->printStatement();
 
+		if ($this->match(TOK_RETURN)) return $this->returnStatement();
+
 		if ($this->match(TOK_WHILE)) return $this->whileStatement();
 
 		if ($this->match(TOK_LEFT_BRACE)) return new BlockStmt($this->block());
 
 		return $this->expressionStatement();
+	}
+
+	public function returnStatement()
+	{
+		$keyword = $this->previous();
+		$value = null;
+		if (!$this->check(TOK_SEMICOLON))
+		{
+			$value = $this->expression();
+		}
+
+		$this->consume(TOK_SEMICOLON, "Expect ';' after return value.");
+		return new ReturnStmt($keyword, $value);
 	}
 
 	private function whileStatement()
@@ -292,7 +330,47 @@ class Parser
 			return new UnaryExpr($operator, $right);
 		}
 
-		return $this->primary();
+		return $this->call();
+	}
+
+	private function call()
+	{
+		$expr = $this->primary();
+
+		while (true)
+		{
+			if ($this->match(TOK_LEFT_PAREN))
+			{
+				$expr = $this->finishCall($expr);
+			}
+			else
+			{
+				break;
+			}
+		}
+
+		return $expr;
+	}
+
+	private function finishCall(Expr $callee)
+	{
+		$arguments = [];
+
+		if (!$this->check(TOK_RIGHT_PAREN))
+		{
+			do {
+				if (count($arguments) >= FUNC_MAX_ARGS)
+				{
+					$this->error($this->peek(), "Cannot have more than 8 arguments.");
+				}
+
+				$arguments[] = $this->expression();
+			} while ($this->match(TOK_COMMA));
+		}
+
+		$paren = $this->consume(TOK_RIGHT_PAREN, "Expect ')' after arguments.");
+
+		return new CallExpr($callee, $paren, $arguments);
 	}
 
 	private function primary()

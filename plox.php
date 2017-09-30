@@ -1,7 +1,13 @@
 <?php
-require_once('scanner.php');
-require_once('parser.php');
-require_once('interpreter.php');
+spl_autoload_register(function ($class)
+{
+	$class = strtolower($class);
+	$class = str_replace('\\', '/', $class);
+	require($class.'.php');
+});
+
+require_once('tokentype.php');
+require_once('ast.php');
 
 if ($argc > 2)
 {

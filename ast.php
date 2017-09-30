@@ -1,6 +1,4 @@
 <?php
-require_once('token.php');
-
 abstract class Expr
 {
 	abstract public function accept($visitor);
@@ -235,8 +233,10 @@ interface VisitorStmt
 {
 	public function visitBlockStmt(BlockStmt $stmt);
 	public function visitExpressionStmt(ExpressionStmt $stmt);
+	public function visitFunctionStmt(FunctionStmt $stmt);
 	public function visitIfStmt(IfStmt $stmt);
 	public function visitPrintStmt(PrintStmt $stmt);
+	public function visitReturnStmt(ReturnStmt $stmt);
 	public function visitVarStmt(VarStmt $stmt);
 	public function visitWhileStmt(WhileStmt $stmt);
 }
@@ -271,9 +271,28 @@ class ExpressionStmt extends Stmt
 	public $expression;
 }
 
+class FunctionStmt extends Stmt
+{
+	public function __construct(Token $name, array $parameters, array $body)
+	{
+		$this->name = $name;
+		$this->parameters = $parameters;
+		$this->body = $body;
+	}
+
+	public function accept($visitor)
+	{
+		return $visitor->visitFunctionStmt($this);
+	}
+
+	public $name;
+	public $parameters;
+	public $body;
+}
+
 class IfStmt extends Stmt
 {
-	public function __construct(Expr $condition, Stmt $thenBranch, Stmt $elseBranch)
+	public function __construct(Expr $condition, Stmt $thenBranch, $elseBranch)
 	{
 		$this->condition = $condition;
 		$this->thenBranch = $thenBranch;
@@ -303,6 +322,23 @@ class PrintStmt extends Stmt
 	}
 
 	public $expression;
+}
+
+class ReturnStmt extends Stmt
+{
+	public function __construct(Token $keyword, Expr $value)
+	{
+		$this->keyword = $keyword;
+		$this->value = $value;
+	}
+
+	public function accept($visitor)
+	{
+		return $visitor->visitReturnStmt($this);
+	}
+
+	public $keyword;
+	public $value;
 }
 
 class VarStmt extends Stmt

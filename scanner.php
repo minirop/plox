@@ -1,7 +1,4 @@
 <?php
-require_once('token.php');
-require_once('eplox.php');
-
 class Scanner
 {
 	private $source;
@@ -76,7 +73,7 @@ class Scanner
 				if ($this->match('/'))
 				{
 					// A comment goes until the end of the line.
-					while ($this->peek() != '\n' && !$this->isAtEnd()) $this->advance();
+					while ($this->peek() != "\n" && !$this->isAtEnd()) $this->advance();
 				}
 				else
 				{
