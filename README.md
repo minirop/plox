@@ -11,14 +11,9 @@ How to try it
     # or after 'chmod +x plox'
     $ ./plox hello.lox
 
-If you want to try the Lox syntax, you can also launch the interpreter without a filename to have a REPL prompt that will (at the moment) spit out the tokens.
+If you want to try the Lox syntax, you can also launch the interpreter without a filename to have a REPL prompt (you have to write all the code on one line):
 
     $ ./plox
-    > var test = 3;
-    TOK_VAR
-    TOK_IDENTIFIER (test)
-    TOK_EQUAL
-    TOK_NUMBER (3)
-    TOK_SEMICOLON
-    TOK_EOF
+    > var test = 3; print test;
+    3
     >
