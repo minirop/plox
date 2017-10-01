@@ -14,6 +14,7 @@ class Interpreter implements VisitorExpr, VisitorStmt
 {
 	public $globals;
 	private $environment;
+	private $locals = [];
 
 	public function __construct()
 	{
@@ -38,6 +39,43 @@ class Interpreter implements VisitorExpr, VisitorStmt
 		}
 	}
 
+	private function hasLocal(Expr $expr)
+	{
+		foreach ($this->locals as $arr)
+		{
+			if ($arr[0] === $expr)
+			{
+				return true;
+			}
+		}
+		return false;
+	}
+
+	private function getLocal(Expr $expr)
+	{
+		foreach ($this->locals as $arr)
+		{
+			if ($arr[0] === $expr)
+			{
+				return $arr[1];
+			}
+		}
+		return null;
+	}
+
+	private function setLocal(Expr $expr, $value)
+	{
+		foreach ($this->locals as &$arr)
+		{
+			if ($arr[0] === $expr)
+			{
+				$arr[1] = $value;
+			}
+		}
+		
+		$this->locals[] = [$expr, $value];
+	}
+
 	public function print(Expr $expr)
 	{
 		echo "lol\n";
@@ -46,8 +84,17 @@ class Interpreter implements VisitorExpr, VisitorStmt
 	public function visitAssignExpr(AssignExpr $expr)
 	{
 		$value = $this->evaluate($expr->value);
-		$this->environment->assign($expr->name, $value);
 
+		if ($this->hasLocal($expr))
+		{
+			$distance = $this->getLocal($expr);
+			$this->environment->assignAt($distance, $name->literal, $value);
+		}
+		else
+		{
+			$this->globals[$name] = $value;
+		}
+		
 		return $value;
 	}
 
@@ -175,7 +222,7 @@ class Interpreter implements VisitorExpr, VisitorStmt
 	
 	public function visitVariableExpr(VariableExpr $expr)
 	{
-		return $this->environment->get($expr->name);
+		return $this->lookUpVariable($expr->name, $expr);
 	}
 
 	public function visitBlockStmt(BlockStmt $stmt)
@@ -272,6 +319,19 @@ class Interpreter implements VisitorExpr, VisitorStmt
 		throw new RuntimeError("Operand must be a number");
 	}
 
+	private function lookUpVariable(Token $name, Expr $expr)
+	{
+		if ($this->hasLocal($expr))
+		{
+			$distance = $this->getLocal($expr);
+			return $this->environment->getAt($distance, $name->literal);
+		}
+		else
+		{
+			return $this->globals->get($name);
+		}
+	}
+
 	private function execute(Stmt $stmt)
 	{
 		$stmt->accept($this);
@@ -293,5 +353,10 @@ class Interpreter implements VisitorExpr, VisitorStmt
 		{
 			$this->environment = $previous;
 		}
+	}
+
+	public function resolve(Expr $expr, $depth)
+	{
+		$this->setLocal($expr, $depth);
 	}
 }

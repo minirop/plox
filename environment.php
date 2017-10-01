@@ -14,6 +14,28 @@ class Environment
 		$this->values[$name] = $value;
 	}
 
+	public function getAt($distance, $name)
+	{
+		$environment = $this;
+		for ($i = 0; $i < $distance; $i++)
+		{
+			$environment = $environment->enclosing;
+		}
+
+		return $environment->values[$name]; 
+	}
+
+	public function assignAt($distance, Token $name, $value)
+	{
+		$environment = $this;
+		for ($i = 0; i < $distance; $i++)
+		{
+			$environment = $environment->enclosing;
+		}
+
+		$environment->values[$name->literal] = $value;
+	}
+
 	public function get(Token $name)
 	{
 		if (array_key_exists($name->literal, $this->values))

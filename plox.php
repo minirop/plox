@@ -40,6 +40,8 @@ function runPrompt()
 
 function run($source)
 {
+	$interpreter = new Interpreter();
+	
 	$scanner = new Scanner($source);
 	$tokens = $scanner->scanTokens();
 
@@ -48,5 +50,10 @@ function run($source)
 
 	if (EPlox::$hadError) return;
 
-	(new Interpreter())->interpret($statements);
+	$resolver = new Resolver($interpreter);
+	$resolver->resolve($statements);
+
+	if (EPlox::$hadError) return;
+
+	$interpreter->interpret($statements);
 }
