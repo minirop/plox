@@ -1,7 +1,7 @@
 <?php
 class RuntimeError extends Exception
 {
-	private $token;
+	public $token;
 
 	public function __construct(Token $token, $message)
 	{
@@ -165,6 +165,13 @@ class Interpreter implements VisitorExpr, VisitorStmt
 	
 	public function visitGetExpr(GetExpr $expr)
 	{
+		$object = $this->evaluate($expr->object);
+		if ($object instanceof LoxInstance)
+		{
+			return $object->get($expr->name);
+		}
+
+		throw new RuntimeError($expr->name, "Only instances have properties.");
 	}
 	
 	public function visitGroupingExpr(GroupingExpr $expr)
@@ -195,6 +202,15 @@ class Interpreter implements VisitorExpr, VisitorStmt
 	
 	public function visitSetExpr(SetExpr $expr)
 	{
+		$object = $this->evaluate($expr->object);
+
+		if (!($object instanceof LoxInstance)) { 
+			throw new RuntimeError($expr->name, "Only instances have fields.");
+		}
+
+		$value = $this->evaluate($expr->value);
+		$object->set($expr->name, $value);
+		return $value;
 	}
 	
 	public function visitSuperExpr(SuperExpr $expr)
@@ -203,6 +219,7 @@ class Interpreter implements VisitorExpr, VisitorStmt
 	
 	public function visitThisExpr(ThisExpr $expr)
 	{
+		return lookUpVariable($expr->keyword, $expr);
 	}
 	
 	public function visitUnaryExpr(UnaryExpr $expr)
@@ -230,6 +247,21 @@ class Interpreter implements VisitorExpr, VisitorStmt
 		$this->executeBlock($stmt->statements, new Environment($this->environment));
 	}
 
+	public function visitClassStmt(ClassStmt $stmt)
+	{
+		$this->environment->define($stmt->name->literal, null);
+
+		$methods = [];
+		foreach ($stmt->methods as $method)
+		{
+			$function = new LoxFunction($method, $this->environment, ($method->name->literal === "init"));
+			$methods[$method->name->literal] = $function;
+		}
+
+		$klass = new LoxClass($stmt->name->literal, $methods);
+		$this->environment->assign($stmt->name, $klass);
+	}
+
 	public function visitExpressionStmt(ExpressionStmt $stmt)
 	{
 		$this->evaluate($stmt->expression);
@@ -237,7 +269,7 @@ class Interpreter implements VisitorExpr, VisitorStmt
 
 	public function visitFunctionStmt(FunctionStmt $stmt)
 	{
-		$function = new LoxFunction($stmt, $this->environment);
+		$function = new LoxFunction($stmt, $this->environment, false);
 		$this->environment->define($stmt->name->literal, $function);
 	}
 

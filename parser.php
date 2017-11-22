@@ -25,6 +25,7 @@ class Parser
 	private function declaration()
 	{
 		try {
+			if ($this->match(TOK_CLASS)) return $this->classDeclaration();
 			if ($this->match(TOK_FUN)) return $this->method("function");
 			if ($this->match(TOK_VAR)) return $this->varDeclaration();
 			return $this->statement();
@@ -34,6 +35,22 @@ class Parser
 			$this->synchronize();
 			return null;
 		}
+	}
+
+	private function classDeclaration()
+	{
+		$name = $this->consume(TOK_IDENTIFIER, "Expect class name.");
+		$this->consume(TOK_LEFT_BRACE, "Expect '{' before class body.");
+
+		$methods = [];
+		while (!$this->check(TOK_RIGHT_BRACE) && !$this->isAtEnd())
+		{
+			$methods[] = $this->method("method");
+		}
+
+		$this->consume(TOK_RIGHT_BRACE, "Expect '}' after class body.");
+
+		return new ClassStmt($name, $methods);
 	}
 
 	private function method($kind) {
@@ -232,6 +249,10 @@ class Parser
 				$name = $expr->name;
 				return new AssignExpr($name, $value);
 			}
+			else if ($expr instanceof GetExpr)
+			{
+				return new SetExpr($expr->object, $expr->name, $value);
+			}
 		}
 
 		return $expr;
@@ -343,6 +364,11 @@ class Parser
 			{
 				$expr = $this->finishCall($expr);
 			}
+			else if ($this->match(TOK_DOT))
+			{
+				$name = $this->consume(TOK_IDENTIFIER, "Expect property name after '.'.");
+				$expr = new GetExpr($expr, $name);
+			}
 			else
 			{
 				break;
@@ -383,6 +409,8 @@ class Parser
 		{
 			return new LiteralExpr($this->previous()->literal);
 		}
+
+		if ($this->match(TOK_THIS)) return new ThisExpr($this->previous());
 
 		if ($this->match(TOK_IDENTIFIER))
 		{

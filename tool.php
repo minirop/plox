@@ -22,6 +22,7 @@ defineAst($file, 'Expr', [
 
 defineAst($file, 'Stmt', [
 	"Block      : Array statements",
+	"Class      : Token name, array methods",
 	"Expression : Expr expression",
 	"Function   : Token name, array parameters, array body",
 	"If         : Expr condition, Stmt thenBranch, elseBranch",

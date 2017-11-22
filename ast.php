@@ -1,4 +1,6 @@
 <?php
+require_once('token.php');
+
 abstract class Expr
 {
 	abstract public function accept($visitor);
@@ -232,6 +234,7 @@ abstract class Stmt
 interface VisitorStmt
 {
 	public function visitBlockStmt(BlockStmt $stmt);
+	public function visitClassStmt(ClassStmt $stmt);
 	public function visitExpressionStmt(ExpressionStmt $stmt);
 	public function visitFunctionStmt(FunctionStmt $stmt);
 	public function visitIfStmt(IfStmt $stmt);
@@ -254,6 +257,23 @@ class BlockStmt extends Stmt
 	}
 
 	public $statements;
+}
+
+class ClassStmt extends Stmt
+{
+	public function __construct(Token $name, array $methods)
+	{
+		$this->name = $name;
+		$this->methods = $methods;
+	}
+
+	public function accept($visitor)
+	{
+		return $visitor->visitClassStmt($this);
+	}
+
+	public $name;
+	public $methods;
 }
 
 class ExpressionStmt extends Stmt

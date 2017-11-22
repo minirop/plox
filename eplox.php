@@ -2,6 +2,7 @@
 class EPlox
 {
 	public static $hadError = false;
+	public static $hadRuntimeError = false;
 
 	public static function error($line_or_token, $message)
 	{
@@ -28,5 +29,11 @@ class EPlox
 	{
 		print("[line $line] Error$where: $message\n");
 		self::$hadError = true;
+	}
+
+	public static function runtimeError(RuntimeError $error)
+	{
+		print("[line " . $error->token->line . "] " . $error->getMessage() . "\n");
+		self::$hadRuntimeError = true;
 	}
 }

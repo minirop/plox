@@ -3,12 +3,17 @@ require_once('ast.php');
 
 define('TYPE_NONE', 0);
 define('TYPE_FUNCTION', 1);
+define('TYPE_METHOD', 2);
+define('TYPE_INITIALIZER', 3);
+
+define('TYPE_CLASS', 100);
 
 class Resolver implements VisitorExpr, VisitorStmt
 {
 	private $interpreter;
 	private $scopes;
 	private $currentFunction = TYPE_NONE;
+	private $currentClass = TYPE_NONE;
 
 	public function __construct(Interpreter $interpreter) {
 		$this->interpreter = $interpreter;
@@ -38,6 +43,7 @@ class Resolver implements VisitorExpr, VisitorStmt
 
 	public function visitGetExpr(GetExpr $expr)
 	{
+		$this->resolve($expr->object);
 	}
 
 	public function visitGroupingExpr(GroupingExpr $expr)
@@ -57,7 +63,8 @@ class Resolver implements VisitorExpr, VisitorStmt
 
 	public function visitSetExpr(SetExpr $expr)
 	{
-		
+		$this->resolve($expr->value);
+		$this->resolve($expr->object);
 	}
 
 	public function visitSuperExpr(SuperExpr $expr)
@@ -67,7 +74,13 @@ class Resolver implements VisitorExpr, VisitorStmt
 
 	public function visitThisExpr(ThisExpr $expr)
 	{
-		
+		if ($this->currentClass == TYPE_NONE)
+		{
+			Plox::error($expr->keyword, "Cannot use 'this' outside of a class.");
+			return null;
+		}
+
+		$this->resolveLocal($expr, $expr->keyword);
 	}
 
 	public function visitUnaryExpr(UnaryExpr $expr)
@@ -90,6 +103,32 @@ class Resolver implements VisitorExpr, VisitorStmt
 		$this->beginScope();
 		$this->resolve($stmt->statements);
 		$this->endScope();
+	}
+
+	public function visitClassStmt(ClassStmt $stmt)
+	{
+		$this->declare($stmt->name);
+		$this->define($stmt->name);
+
+		$enclosingClass = $this->currentClass;
+		$this->currentClass = TYPE_CLASS;
+
+		$this->beginScope();
+	    $this->scopes[count($this->scopes)]["this"] = true;
+
+		foreach ($stmt->methods as $method)
+		{
+			$declaration = TYPE_METHOD;
+			if ($method->name->literal === 'init')
+			{
+				$declaration = TYPE_INITIALIZER;
+			}
+			$this->resolveFunction($method, $declaration);
+		}
+
+		$this->endScope();
+
+		$this->currentClass = $enclosingClass;
 	}
 
 	public function visitExpressionStmt(ExpressionStmt $stmt)
@@ -127,7 +166,14 @@ class Resolver implements VisitorExpr, VisitorStmt
 		}
 
 		if ($stmt->value !== null)
+		{
+			if ($this->currentFunction === TYPE_INITIALIZER)
+			{
+				Plox::error($stmt->keyword, "Cannot return a value from an initializer.");
+			}
+
 			$this->resolve($stmt->value);
+		}
 	}
 
 	public function visitVarStmt(VarStmt $stmt)
