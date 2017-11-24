@@ -1,11 +1,11 @@
 <?php
 require_once('ast.php');
 
-class AstPrinter implements VisitorExpr
+class AstPrinter implements VisitorExpr, VisitorStmt
 {
-	public function print(Expr $expr)
+	public function print(Stmt $stmt)
 	{
-		return $expr->accept($this);
+		return $stmt->accept($this);
 	}
 
 	public function visitAssignExpr(AssignExpr $expr)
@@ -66,5 +66,50 @@ class AstPrinter implements VisitorExpr
 	public function visitVariableExpr(VariableExpr $expr)
 	{
 		return 'var';
+	}
+
+	public function visitBlockStmt(BlockStmt $stmt)
+	{
+		return 'block';
+	}
+
+	public function visitClassStmt(ClassStmt $stmt)
+	{
+		return 'class';
+	}
+	
+	public function visitExpressionStmt(ExpressionStmt $stmt)
+	{
+		return $stmt->expression->accept($this);
+	}
+	
+	public function visitFunctionStmt(FunctionStmt $stmt)
+	{
+		return 'function';
+	}
+	
+	public function visitIfStmt(IfStmt $stmt)
+	{
+		return 'if';
+	}
+	
+	public function visitPrintStmt(PrintStmt $stmt)
+	{
+		return 'print';
+	}
+	
+	public function visitReturnStmt(ReturnStmt $stmt)
+	{
+		return 'return';
+	}
+	
+	public function visitVarStmt(VarStmt $stmt)
+	{
+		return 'var';
+	}
+	
+	public function visitWhileStmt(WhileStmt $stmt)
+	{
+		return 'while';
 	}
 }

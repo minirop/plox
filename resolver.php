@@ -114,7 +114,7 @@ class Resolver implements VisitorExpr, VisitorStmt
 		$this->currentClass = TYPE_CLASS;
 
 		$this->beginScope();
-	    $this->scopes[count($this->scopes)]["this"] = true;
+		$this->scopes[count($this->scopes)]["this"] = true;
 
 		foreach ($stmt->methods as $method)
 		{
