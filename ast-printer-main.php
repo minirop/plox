@@ -1,14 +1,15 @@
 <?php
+require_once('tokentype.php');
 require_once('ast-printer.php');
 
-$expression = new Binary(
-	new Unary(
+$expression = new BinaryExpr(
+	new UnaryExpr(
 		new Token(TOK_MINUS, "-", null, 1),
-		new Literal(123)
+		new LiteralExpr(123)
 	),
 	new Token(TOK_STAR, "*", null, 1),
-	new Grouping(
-		new Literal(45.67)
+	new GroupingExpr(
+		new LiteralExpr(45.67)
 	)
 );
 
