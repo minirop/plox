@@ -193,7 +193,6 @@ class Scanner
 		if (isset(self::$keywords[$str]))
 		{
 			$type = self::$keywords[$str];
-			$str = null;
 		}
 
 		$this->addToken($type, $str);

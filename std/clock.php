@@ -12,4 +12,9 @@ class Clock implements \LoxCallable
 	{
 		return time();
 	}
+
+	public function __tostring()
+	{
+		return 'Std\Clock';
+	}
 }

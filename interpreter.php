@@ -76,11 +76,6 @@ class Interpreter implements VisitorExpr, VisitorStmt
 		$this->locals[] = [$expr, $value];
 	}
 
-	public function print(Expr $expr)
-	{
-		echo "lol\n";
-	}
-
 	public function visitAssignExpr(AssignExpr $expr)
 	{
 		$value = $this->evaluate($expr->value);
@@ -219,7 +214,7 @@ class Interpreter implements VisitorExpr, VisitorStmt
 	
 	public function visitThisExpr(ThisExpr $expr)
 	{
-		return lookUpVariable($expr->keyword, $expr);
+		return $this->lookUpVariable($expr->keyword, $expr);
 	}
 	
 	public function visitUnaryExpr(UnaryExpr $expr)

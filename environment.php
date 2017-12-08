@@ -48,7 +48,7 @@ class Environment
 			return $this->enclosing->get($name);
 		}
 
-		throw new ParseError("Undef ".$name->literal);
+		throw new RuntimeError($name, "Undefined variable '".$name->literal."'.");
 	}
 
 	public function assign(Token $name, $value)
@@ -65,6 +65,6 @@ class Environment
 			return;
 		}
 
-		throw new ParseError("Undef ".$name->literal);
+		throw new RuntimeError($name, "Undefined variable '".$name->literal."'.");
 	}
 }
