@@ -7,6 +7,7 @@ define('TYPE_METHOD', 2);
 define('TYPE_INITIALIZER', 3);
 
 define('TYPE_CLASS', 100);
+define('TYPE_SUBCLASS', 101);
 
 class Resolver implements VisitorExpr, VisitorStmt
 {
@@ -69,14 +70,22 @@ class Resolver implements VisitorExpr, VisitorStmt
 
 	public function visitSuperExpr(SuperExpr $expr)
 	{
-		
+		if ($this->currentClass == TYPE_NONE)
+		{
+			EPLox::error($expr->keyword, "Cannot use 'super' outside of a class.");
+		}
+		else if ($this->currentClass != TYPE_SUBCLASS)
+		{
+			EPLox::error($expr->keyword, "Cannot use 'super' in a class with no superclass.");
+		}
+		$this->resolveLocal($expr, $expr->keyword);
 	}
 
 	public function visitThisExpr(ThisExpr $expr)
 	{
 		if ($this->currentClass == TYPE_NONE)
 		{
-			Plox::error($expr->keyword, "Cannot use 'this' outside of a class.");
+			EPLox::error($expr->keyword, "Cannot use 'this' outside of a class.");
 			return null;
 		}
 
@@ -113,6 +122,14 @@ class Resolver implements VisitorExpr, VisitorStmt
 		$enclosingClass = $this->currentClass;
 		$this->currentClass = TYPE_CLASS;
 
+		if ($stmt->superclass != null)
+		{
+			$this->currentClass = TYPE_SUBCLASS;
+			$this->resolve($stmt->superclass);
+			$this->beginScope();
+			$this->scopes[count($this->scopes) - 1]["super"] = true;
+		}
+
 		$this->beginScope();
 		$this->scopes[count($this->scopes) - 1]["this"] = true;
 
@@ -127,6 +144,7 @@ class Resolver implements VisitorExpr, VisitorStmt
 		}
 
 		$this->endScope();
+		if ($stmt->superclass != null) $this->endScope();
 
 		$this->currentClass = $enclosingClass;
 	}

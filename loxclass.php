@@ -2,11 +2,13 @@
 class LoxClass implements LoxCallable
 {
 	private $name;
+	private $superclass;
 	private $methods;
 
-	public function __construct($name, array $methods)
+	public function __construct($name, $superclass, array $methods)
 	{
 		$this->name = $name;
+		$this->superclass = $superclass;
 		$this->methods = $methods;
 	}
 
@@ -15,6 +17,11 @@ class LoxClass implements LoxCallable
 		if (isset($this->methods[$name]))
 		{
 			return $this->methods[$name]->bind($instance);
+		}
+
+		if ($this->superclass != null)
+		{
+			return $this->superclass->findMethod($instance, $name);
 		}
 
 		return null;

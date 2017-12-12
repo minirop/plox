@@ -246,7 +246,7 @@ interface VisitorStmt
 
 class BlockStmt extends Stmt
 {
-	public function __construct(Array $statements)
+	public function __construct(array $statements)
 	{
 		$this->statements = $statements;
 	}
@@ -261,9 +261,10 @@ class BlockStmt extends Stmt
 
 class ClassStmt extends Stmt
 {
-	public function __construct(Token $name, array $methods)
+	public function __construct(Token $name, $superclass, array $methods)
 	{
 		$this->name = $name;
+		$this->superclass = $superclass;
 		$this->methods = $methods;
 	}
 
@@ -273,6 +274,7 @@ class ClassStmt extends Stmt
 	}
 
 	public $name;
+	public $superclass;
 	public $methods;
 }
 

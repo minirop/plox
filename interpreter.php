@@ -210,6 +210,18 @@ class Interpreter implements VisitorExpr, VisitorStmt
 	
 	public function visitSuperExpr(SuperExpr $expr)
 	{
+		$distance = $this->getLocal($expr);
+		$superclass = $this->environment->getAt($distance, "super");
+		$object = $this->environment->getAt($distance - 1, "this");
+
+		$method = $superclass->findMethod($object, $expr->method->literal);
+
+		if ($method == null)
+		{
+			throw new RuntimeError($expr->method, "Undefined property '" . $expr->method->literal . "'.");
+		}
+
+		return $method;
 	}
 	
 	public function visitThisExpr(ThisExpr $expr)
@@ -246,6 +258,19 @@ class Interpreter implements VisitorExpr, VisitorStmt
 	{
 		$this->environment->define($stmt->name->literal, null);
 
+		$superclass = null;
+		if ($stmt->superclass != null)
+		{
+			$superclass = $this->evaluate($stmt->superclass);
+			if (!($superclass instanceof LoxClass))
+			{
+				throw new RuntimeError($stmt->name, "Superclass must be a class.");
+			}
+
+			$this->environment = new Environment($this->environment);
+			$this->environment->define("super", $superclass);
+		}
+
 		$methods = [];
 		foreach ($stmt->methods as $method)
 		{
@@ -253,7 +278,13 @@ class Interpreter implements VisitorExpr, VisitorStmt
 			$methods[$method->name->literal] = $function;
 		}
 
-		$klass = new LoxClass($stmt->name->literal, $methods);
+		$klass = new LoxClass($stmt->name->literal, $superclass, $methods);
+
+		if ($superclass != null)
+		{
+			$this->environment = $this->environment->getEnclosing();
+		}
+
 		$this->environment->assign($stmt->name, $klass);
 	}
 

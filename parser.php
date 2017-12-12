@@ -40,6 +40,14 @@ class Parser
 	private function classDeclaration()
 	{
 		$name = $this->consume(TOK_IDENTIFIER, "Expect class name.");
+
+		$superclass = null;
+		if ($this->match(TOK_LESS))
+		{
+			$this->consume(TOK_IDENTIFIER, "Expect superclass name.");
+			$superclass = new VariableExpr($this->previous());
+		}
+
 		$this->consume(TOK_LEFT_BRACE, "Expect '{' before class body.");
 
 		$methods = [];
@@ -50,7 +58,7 @@ class Parser
 
 		$this->consume(TOK_RIGHT_BRACE, "Expect '}' after class body.");
 
-		return new ClassStmt($name, $methods);
+		return new ClassStmt($name, $superclass, $methods);
 	}
 
 	private function method($kind) {
@@ -408,6 +416,14 @@ class Parser
 		if ($this->match(TOK_NUMBER, TOK_STRING))
 		{
 			return new LiteralExpr($this->previous()->literal);
+		}
+
+		if ($this->match(TOK_SUPER))
+		{
+			$keyword = $this->previous();
+			$this->consume(TOK_DOT, "Expect '.' after 'super'.");
+			$method = $this->consume(TOK_IDENTIFIER, "Expect superclass method name.");
+			return new SuperExpr($keyword, $method);
 		}
 
 		if ($this->match(TOK_THIS)) return new ThisExpr($this->previous());

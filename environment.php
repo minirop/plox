@@ -67,4 +67,9 @@ class Environment
 
 		throw new RuntimeError($name, "Undefined variable '".$name->literal."'.");
 	}
+
+	public function getEnclosing()
+	{
+		return $this->enclosing;
+	}
 }
