@@ -83,7 +83,7 @@ class Interpreter implements VisitorExpr, VisitorStmt
 		if ($this->hasLocal($expr))
 		{
 			$distance = $this->getLocal($expr);
-			$this->environment->assignAt($distance, $name->literal, $value);
+			$this->environment->assignAt($distance, $expr->name, $value);
 		}
 		else
 		{

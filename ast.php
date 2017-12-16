@@ -365,7 +365,7 @@ class ReturnStmt extends Stmt
 
 class VarStmt extends Stmt
 {
-	public function __construct(Token $name, Expr $initializer)
+	public function __construct(Token $name, $initializer)
 	{
 		$this->name = $name;
 		$this->initializer = $initializer;

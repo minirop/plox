@@ -52,6 +52,7 @@ function run($source)
 
 	$resolver = new Resolver($interpreter);
 	$resolver->resolve($statements);
+	unset($resolver);
 
 	if (EPlox::$hadError) return;
 

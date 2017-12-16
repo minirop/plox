@@ -28,7 +28,7 @@ class Environment
 	public function assignAt($distance, Token $name, $value)
 	{
 		$environment = $this;
-		for ($i = 0; i < $distance; $i++)
+		for ($i = 0; $i < $distance; $i++)
 		{
 			$environment = $environment->enclosing;
 		}

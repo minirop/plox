@@ -11,7 +11,7 @@ class EPlox
 			$token = $line_or_token;
 			if ($token->type == TOK_EOF)
 			{
-				self::report($token.line, " at end", $message);
+				self::report($token->line, " at end", $message);
 			}
 			else
 			{
@@ -35,5 +35,10 @@ class EPlox
 	{
 		print("[line " . $error->token->line . "] " . $error->getMessage() . "\n");
 		self::$hadRuntimeError = true;
+	}
+
+	public static function warning($message)
+	{
+		print("WARNING: " . $message . "\n");
 	}
 }

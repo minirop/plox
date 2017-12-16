@@ -28,7 +28,7 @@ defineAst($file, 'Stmt', [
 	"If         : Expr condition, Stmt thenBranch, elseBranch",
 	"Print      : Expr expression",
 	"Return     : Token keyword, Expr value",
-	"Var        : Token name, Expr initializer",
+	"Var        : Token name, initializer",
 	"While      : Expr condition, Stmt body"
 ]);
 

@@ -9,6 +9,47 @@ define('TYPE_INITIALIZER', 3);
 define('TYPE_CLASS', 100);
 define('TYPE_SUBCLASS', 101);
 
+class VariableStatus
+{
+	private $depth = -1;
+	private $name;
+	private $status; // false = declared, true = defined
+
+	public function __construct(Token $name, $status)
+	{
+		$this->name = $name;
+		$this->status = $status;
+	}
+
+	public function setDepth($depth)
+	{
+		if ($this->depth < 0 || $this->depth > $depth)
+		{
+			$this->depth = $depth;
+		}
+	}
+
+	public function status()
+	{
+		return $this->status;
+	}
+
+	public function depth()
+	{
+		return $this->depth;
+	}
+
+	public function line()
+	{
+		return $this->name->line;
+	}
+
+	public function name()
+	{
+		return $this->name->literal;
+	}
+}
+
 class Resolver implements VisitorExpr, VisitorStmt
 {
 	private $interpreter;
@@ -16,10 +57,19 @@ class Resolver implements VisitorExpr, VisitorStmt
 	private $currentFunction = TYPE_NONE;
 	private $currentClass = TYPE_NONE;
 
-	public function __construct(Interpreter $interpreter) {
+	public function __construct(Interpreter $interpreter)
+	{
 		$this->interpreter = $interpreter;
 		$this->scopes = [];
+
+		$this->beginScope();
 	}
+
+	public function __destruct()
+	{
+		$this->endScope();
+	}
+
 	public function visitAssignExpr(AssignExpr $expr)
 	{
 		$this->resolve($expr->value);
@@ -99,7 +149,7 @@ class Resolver implements VisitorExpr, VisitorStmt
 
 	public function visitVariableExpr(VariableExpr $expr)
 	{
-		if (count($this->scopes) && isset($this->scopes[0][$expr->name->literal]) && $this->scopes[0][$expr->name->literal] === false)
+		if (count($this->scopes) && isset($this->scopes[0][$expr->name->literal]) && $this->scopes[0][$expr->name->literal]->status() === false)
 		{
 			EPLox::error($expr->name, "Cannot read local variable in its own initializer.");
 		}
@@ -127,11 +177,11 @@ class Resolver implements VisitorExpr, VisitorStmt
 			$this->currentClass = TYPE_SUBCLASS;
 			$this->resolve($stmt->superclass);
 			$this->beginScope();
-			$this->scopes[count($this->scopes) - 1]["super"] = true;
+			$this->scopes[count($this->scopes) - 1]["super"] = new VariableStatus($name, true);
 		}
 
 		$this->beginScope();
-		$this->scopes[count($this->scopes) - 1]["this"] = true;
+		$this->scopes[count($this->scopes) - 1]["this"] = new VariableStatus($name, true);
 
 		foreach ($stmt->methods as $method)
 		{
@@ -230,10 +280,11 @@ class Resolver implements VisitorExpr, VisitorStmt
 	private function resolveLocal(Expr $expr, Token $name)
 	{
 		$depth = 0;
-		foreach ($this->scopes as $scope)
+		foreach ($this->scopes as &$scope)
 		{
 			if (isset($scope[$name->literal]))
 			{
+				$scope[$name->literal]->setDepth($depth);
 				$this->interpreter->resolve($expr, $depth);
 				return;
 			}
@@ -265,7 +316,19 @@ class Resolver implements VisitorExpr, VisitorStmt
 
 	private function endScope()
 	{
-		array_shift($this->scopes);
+		$scope = array_shift($this->scopes);
+		foreach ($scope as $variable)
+		{
+			if ($variable->depth() > 0)
+			{
+				EPlox::warning("variable '".$variable->name()."' declared at line ".$variable->line()." is only used in an inner scope.");
+			}
+			else if ($variable->depth() < 0)
+			{
+				EPlox::warning("variable '".$variable->name()."' declared at line ".$variable->line()." is never used.");
+			}
+		}
+		//var_dump($scope);
 	}
 
 	private function declare(Token $name)
@@ -277,12 +340,12 @@ class Resolver implements VisitorExpr, VisitorStmt
 			EPLox::error($name, "Variable with this name already declared in this scope.");
 		}
 
-		$this->scopes[0][$name->literal] = false;
+		$this->scopes[0][$name->literal] = new VariableStatus($name, false);
 	}
 
 	private function define(Token $name)
 	{
 		if (count($this->scopes) == 0) return;
-		$this->scopes[0][$name->literal] = true;
+		$this->scopes[0][$name->literal] = new VariableStatus($name, true);
 	}
 }
