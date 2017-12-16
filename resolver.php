@@ -321,14 +321,13 @@ class Resolver implements VisitorExpr, VisitorStmt
 		{
 			if ($variable->depth() > 0)
 			{
-				EPlox::warning("variable '".$variable->name()."' declared at line ".$variable->line()." is only used in an inner scope.");
+				EPlox::warning("variable '".$variable->name()."' declared on line ".$variable->line()." is only used in an inner scope.");
 			}
 			else if ($variable->depth() < 0)
 			{
-				EPlox::warning("variable '".$variable->name()."' declared at line ".$variable->line()." is never used.");
+				EPlox::warning("variable '".$variable->name()."' declared on line ".$variable->line()." is never used.");
 			}
 		}
-		//var_dump($scope);
 	}
 
 	private function declare(Token $name)
