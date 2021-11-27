@@ -87,7 +87,7 @@ class Interpreter implements VisitorExpr, VisitorStmt
 		}
 		else
 		{
-			$this->globals[$name] = $value;
+			$this->globals[$expr->name] = $value;
 		}
 		
 		return $value;
