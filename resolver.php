@@ -177,11 +177,11 @@ class Resolver implements VisitorExpr, VisitorStmt
 			$this->currentClass = TYPE_SUBCLASS;
 			$this->resolve($stmt->superclass);
 			$this->beginScope();
-			$this->scopes[count($this->scopes) - 1]["super"] = new VariableStatus($name, true);
+			$this->scopes[count($this->scopes) - 1]["super"] = new VariableStatus($stmt->name, true);
 		}
 
 		$this->beginScope();
-		$this->scopes[count($this->scopes) - 1]["this"] = new VariableStatus($name, true);
+		$this->scopes[count($this->scopes) - 1]["this"] = new VariableStatus($stmt->name, true);
 
 		foreach ($stmt->methods as $method)
 		{
